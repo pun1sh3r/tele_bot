@@ -1,0 +1,11 @@
+#supernova api key
+suprnova_api = ""
+suprnova_id = ""
+suprnova_url = ""
+
+#coinmarketcap site
+coinmkcap_url = "https://min-api.cryptocompare.com/data/price"
+
+#telegram api
+
+telegram_api = ""
