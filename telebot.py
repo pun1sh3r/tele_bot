@@ -4,9 +4,17 @@ import requests as rq
 from telepot.loop import MessageLoop
 import time
 import logging
+import sys
 
 from config import suprnova_api, telegram_api, suprnova_url, suprnova_id,coinmkcap_url
 
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter(fmt='%(asctime)s: %(levelname)s: %(message)s')
+handler  = logging.StreamHandler(stream=sys.stdout)
+handler.setFormatter(formatter)
+log.addHandler(handler)
 
 class Telebot:
     def __init__(self,bot):
@@ -19,11 +27,12 @@ class Telebot:
 
     def tel_handler(self,msg):
         content_type, chat_type, chat_id = tp.glance(msg)
-        print(content_type, chat_type, chat_id)
+        log.info("Message received: {0}".format(msg['text']))
         if content_type == 'text':
             if msg['text'] == '/balance':
                 final_price = self.q_supr('zencash')
                 self.bot.sendMessage(chat_id,"Hi there. Current balance: ${}".format(final_price))
+                log.info("sent message to telegrambot...")
 
 
     def q_supr(self,coin):
@@ -34,13 +43,17 @@ class Telebot:
             'id' : self.s_id
         }
 
-        req = rq.get(self.s_url,params=params)
-        if  req.status_code == 200:
-            req = req.json()
-            print req
-            price = req['getuserbalance']['data']['confirmed']
-            final_price = self.calc_price(price,coin)
-            return final_price
+
+        try:
+            req = rq.get(self.s_url,params=params)
+            if  req.status_code == 200:
+                req = req.json()
+                price = req['getuserbalance']['data']['confirmed']
+                final_price = self.calc_price(price,coin)
+                return final_price
+        except Exception as ex:
+            log.error('exception ocurred: {}'.format(ex))
+
 
     def calc_price(self,price,coin):
         params = {
@@ -48,18 +61,22 @@ class Telebot:
             'tsyms' : 'USD'
 
         }
-        req = rq.get(self.c_url,params=params)
-        if  req.status_code == 200:
-            req = req.json()
-            final_price = req['USD']
-            final_price = float(price) * float(final_price)
-            return round(final_price,3)
+        try:
+            req = rq.get(self.c_url,params=params)
+            if  req.status_code == 200:
+                req = req.json()
+                final_price = req['USD']
+                final_price = float(price) * float(final_price)
+                return round(final_price,3)
+        except Exception as ex:
+            log.error('exception ocurred: {}'.format(ex))
+
 
 telebot = tp.Bot(telegram_api)
 bot = Telebot(telebot)
 
 MessageLoop(telebot,bot.tel_handler).run_as_thread()
-print "listening"
+log.info("telebot listening...")
 while 1:
     time.sleep(10)
 
